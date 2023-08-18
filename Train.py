@@ -14,7 +14,7 @@ def main():
     parser.add_argument('--trial_name', 'tm', help='The Current Trial\'s Name (e.g. Dataset Name)')
     parser.add_argument('--test_size', 'ts', help = 'Proportion of data to use for testing', default=0.15)
 
-    parser.add_argument('--top_ngrams', '-tng', help='t, The Number of Top Character and POS-ngrams to Retain', default = 256)
+    parser.add_argument('--top_ngrams', '-tng', help='t, The Number of top Character and POS-ngrams to Retain', default = 256)
     parser.add_argument('--V', '-V', help='V, the set of n-gram lengths to use', default = [1, 2, 3, 4])
 
     parser.add_argument('--batch_size', '-bs', help = 'Batch Size', default = 512)
