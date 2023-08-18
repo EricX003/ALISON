@@ -1,286 +1,130 @@
-import argparse
-import numpy as np
-import pandas as pd
-import nltk
-nltk.download('punkt')
-nltk.download('averaged_perceptron_tagger')
-nltk.download('stopwords')
-import gc
+import Utils
+import NN
+from NN import *
+from datetime import datetime
 
-import Extraction
-
-from nltk import pos_tag
-from nltk.tokenize import sent_tokenize
-from nltk.tokenize import word_tokenize
-
-from random import random
-import csv
-import time
-
-from nltk.util import ngrams
-from collections import Counter
-import heapq
-
-from string import punctuation
-from nltk.corpus import stopwords
-
-import sklearn
-
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
-from sklearn import svm
-from sklearn import preprocessing
-import xgboost as xgb
-
-#Torch stuff
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-
-import copy
-
-from sklearn import metrics
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.metrics import normalized_mutual_info_score
-
-import os
-
-import pickle
-import itertools
-from pandas import DataFrame
-
-from pandarallel import pandarallel
-pandarallel.initialize()
-
-import tqdm
-
-import captum
-import warnings
-warnings.filterwarnings("ignore")
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-parser = argparse.ArgumentParser()
-
-parser.add_argument("--train", "-T", help = "Path to Training Data", './train.csv')
-parser.add_argument("--test", "-t", help = "Path to Testing Data", default = './test.csv')
-parser.add_argument("--batch_size", "-bs", help = "Batch Size", default = 512)
-parser.add_argument("--t", "-t", help="t, The Number of Top Character and POS-ngrams to Retain", default = 512)
-parser.add_argument("--epochs", "-e", help="Number of Training Epochs", default = 70)
-parser.add_argument("--weight_decay", "-wd", help="Weight Decay Constant", default = 0.00)
-parser.add_argument("--momentum", "-m", help="Momentum Constant", default = 0.90)
-parser.add_argument("--step", "-s", help="Scheduler Step Size", default = 8)
-parser.add_argument("--gamma", "-g", help="Scheduler Gamma Constant", default = 0.30)
-parser.add_argument("--authors_total", "-at", help="Number of Total Authors in Corpus", default = 20)
-parser.add_argument("--authors_to_keep", "-atk", help="Number of Authors to Retain (In Order of Document Frequency)", default = 20)
-parser.add_argument("--trial_name", "tm", help="The Current Trial's Name (E.g. Dataset Name)")
-parser.add_argument("--text_index", "ti", help="The Name of the Column Housing the Text")
-
-parse.parse_args()
-
-print("Device: ", device)
-gc.collect()
-
-#UPenn Treebank Tags: https://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
-tags = ['CC', 'CD', 'DT', 'EX', 'FW', 'IN', 'JJ', 'JJR', 'JJS', 'LS', 'MD', 'NN', 'NNS', 'NNP', 'NNPS', 'PDT', 'POS', 'PRP', 'PRP$', 'RB', 'RBR', 'RBS', 'RP', 'SYM', 'TO', 'UH', 'VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ', 'WDT', 'WP', 'WP$', 'WRB']
-
-class Loader(Dataset):
-
-    def __init__(self, x, y, top_idxs, Scaler):
-
-        self.x = torch.Tensor(Scaler.transform(x))
-        self.y = torch.Tensor([top_idxs[val] for val in y])
-
-    def __len__(self):
-        return len(self.y)
-
-    def __getitem__(self, idx):
-        return self.x[idx], self.y[idx]
-
-class NeuralNetwork(nn.Module):
-    def __init__(self, in_size, num_classes):
-        super(NeuralNetwork, self).__init__()
-        self.act = nn.ReLU()
-        self.dp = 0.25
-        self.width = 1750
-        self.num_classes = num_classes
-        self.linear_relu_stack = nn.Sequential(
-            nn.Dropout(p = self.dp),
-            nn.Linear(in_size, self.width),
-            self.act,
-            nn.Dropout(p = self.dp),
-            nn.Linear(self.width, self.width),
-            self.act,
-            nn.Linear(self.width, self.width),
-            self.act,
-            nn.Linear(self.width, self.width),
-            self.act,
-            nn.Dropout(p = self.dp),
-            nn.Linear(self.width, self.width),
-            self.act,
-            nn.Dropout(p = self.dp),
-            nn.Linear(self.width, self.width),
-            self.act,
-            nn.Dropout(p = self.dp),
-            nn.Linear(self.width, self.width),
-            self.act,
-            nn.Dropout(p = self.dp),
-            nn.Linear(self.width, self.width),
-            self.act,
-            nn.Dropout(p = self.dp),
-            nn.Linear(self.width, self.width),
-            self.act,
-            nn.Dropout(p = self.dp),
-            nn.Linear(self.width, self.width),
-            self.act,
-            nn.Dropout(p = self.dp),
-            nn.Linear(self.width, self.width),
-            self.act,
-            nn.Dropout(p = self.dp),
-            nn.Linear(self.width, 256),
-            self.act,
-            nn.Dropout(p = self.dp),
-            nn.Linear(256, self.num_classes)
-        )
-
-    def forward(self, x):
-        return self.linear_relu_stack(x)
-
-def train_and_eval(model, EPOCHS, training_set, validation_set, loss_function, optimizer, scheduler):
-
-    model.to(device)
-
-    for epoch in range(1, EPOCHS + 1):
-        print('------------', '\n', 'Epoch #:', epoch, '\n', 'Training:')
-
-        with torch.set_grad_enabled(True):
-
-            total = 0
-            correct = 0
-
-            model.train()
-
-            labels = []
-            predictions = []
-            all_preds = []
-            all_labels = []
-
-            with tqdm(training_set, unit = "batch", bar_format = '{l_bar}{bar:20}{r_bar}{bar:-20b}') as tqdm_train:
-                for training_data, labels in tqdm_train:
-                    tqdm_train.set_description(f'Epoch: {epoch}')
-
-                    training_data = training_data.to(device)
-                    labels = torch.tensor(labels, dtype = torch.long)
-                    #print(labels)
-                    labels = labels.to(device)
-                    #print(correct_prediction)
-
-                    optimizer.zero_grad()
+def main():
+    now = datetime.now()
 
-                    prediction = model(training_data).squeeze(1)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    gc.collect()
 
-                    loss = loss_function(prediction, labels)
+    parser = argparse.ArgumentParser()
 
-                    loss.backward()
-                    optimizer.step()
-
-                    for idx, i in enumerate(prediction):
-                        if torch.argmax(i) == labels[idx]:
-                            correct += 1
-                        total += 1
-
-                    tqdm_train.set_postfix(loss=loss.item(), accuracy=100.*correct/total)
-                    time.sleep(0.1)
-
-            training_accuracy = round(correct/total, 5)
-            print('Training Accuracy: ', training_accuracy)
-
-            scheduler.step()
-
-
-        print('------------', '\n', 'Validation:')
-        model.eval()
-        gc.collect()
-
-        total = 0
-        correct = 0
-
-        with torch.no_grad():
-
-            with tqdm(validation_set, unit="batch", bar_format = '{l_bar}{bar:20}{r_bar}{bar:-20b}') as tqdm_val:
-                tqdm_val.set_description(f'Epoch: {epoch}')
-                for val_data, labels in tqdm_val:
-
-                    val_data = val_data.to(device)
-
-                    labels = torch.tensor(labels, dtype = torch.long)
-                    labels = labels.to(device)
-
-                    prediction = model(val_data).squeeze(1)
-
-                    for idx, i in enumerate(prediction):
-                        if torch.argmax(i) == labels[idx]:
-                            correct += 1
-                        total += 1
-
-                    tqdm_val.set_postfix(accuracy=100.*correct/total)
-                    time.sleep(0.1)
-
-            validation_accuracy = round(correct/total, 5)
-            print('Validation Accuracy: ', validation_accuracy)
-            gc.collect()
-
-    return model
-
-idx = 0
-temp = dict()
-offset = 65
-for tag in tags:
-    if offset + idx == 90:
-        offset = 72
-    temp[tag] = chr(offset + idx)
-    idx += 1
-tags = temp
-
-gc.collect()
-
-train = pd.read_csv(args.train)
-test = pd.read_csv(args.test)
-
-top_idxs, total, pos_total = Extraction.preprocess_data(train, args.authors_total, args.authors_to_keep, tag = True)
-
-print('------------', '\n', 'Generating n-grams...')
-
-n_grams = [Extraction.return_best_n_grams(n, args.t, total) for n in [1, 2, 3, 4]]
-
-print('------------', '\n', 'Generating POS n-grams...')
-
-pos_n_grams = [Extraction.return_best_n_grams(n, args.t, pos_total) for n in [1, 2, 3, 4]]
-
-print('------------', '\n', 'Generating data...')
-
-X_train, y_train = Extraction.gen_data(train, [], n_grams, [1, 2, 3, 4], pos_n_grams, top_idxs, total, pos_total)
-X_test, y_test = Extraction.gen_data(test, [], n_grams, [1, 2, 3, 4], pos_n_grams, top_idxs, total, pos_total)
-
-print('------------', '\n', 'Scaling, Loading, and Shuffling Data')
-Scaler = sklearn.preprocessing.StandardScaler().fit(X_train)
-training_Loader = Loader(X_train, y_train, top_idxs, Scaler)
-validation_Loader = Loader(X_test, y_test, top_idxs, Scaler)
-
-training_set = torch.utils.data.DataLoader(training_Loader, batch_size = args.batch_size, shuffle = True)
-validation_set = torch.utils.data.DataLoader(validation_Loader, batch_size = args.batch_size, shuffle = False)
-
-model = NeuralNetwork(len(X_train[0]), num_authors)
-
-loss_function = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr = LR, weight_decay = args.weight_decay)
-scheduler = optim.lr_scheduler.StepLR(optimizer, step_size = args.step_size, gamma = args.gamma)
-
-model = train_and_eval(model, EPOCHS, training_set, validation_set, loss_function, optimizer, scheduler)
-
-torch.save(model.state_dict(), f'./models/{args.trial_name}/model.pt')
-n_grams = [elem for sub in n_grams for elem in sub]
-pos_n_grams = [elem for sub in pos_n_grams for elem in sub]
-np.save(f'./models/{args.trial_name}/n_grams.npy', n_grams)
-np.save(f'./models/{args.trial_name}/pos_ngrams.npy', pos_n_grams)
+    parser.add_argument('--train', '-T', help = 'Path to Training Data', '../Data/train.csv')
+    parser.add_argument('--authors_total', '-at', help='Number of Total Authors in Corpus', default = 10)
+
+    parser.add_argument('--trial_name', 'tm', help='The Current Trial\'s Name (e.g. Dataset Name)')
+    parser.add_argument('--test_size', 'ts', help = 'Proportion of data to use for testing', default=0.15)
+
+    parser.add_argument('--top_ngrams', '-tng', help='t, The Number of Top Character and POS-ngrams to Retain', default = 256)
+    parser.add_argument('--V', '-V', help='V, the set of n-gram lengths to use', default = [1, 2, 3, 4])
+
+    parser.add_argument('--batch_size', '-bs', help = 'Batch Size', default = 512)
+    parser.add_argument('--learning_rate', '-lr', help = 'Learning Rate', default = 0.01)
+    parser.add_argument('--epochs', '-e', help='Number of Training Epochs', default = 30)
+    parser.add_argument('--weight_decay', '-wd', help='Weight Decay Constant', default = 0.00)
+    parser.add_argument('--momentum', '-m', help='Momentum Constant', default = 0.90)
+    parser.add_argument('--step', '-s', help='Scheduler Step Size', default = 3)
+    parser.add_argument('--gamma', '-g', help='Scheduler Gamma Constant', default = 0.30)
+
+    args = parser.parse_args()
+
+    dir = os.getcwd()
+    save_path = os.path.join(dir, 'Trained_Models', f'{args.trial_name}_{now.strftime('%m.%d.%H.%M.%S')}')
+
+    os.makedirs(save_path)
+
+    with open(parser.train, 'r') as reader:
+        lines = [line.partition(' ') for line in reader.readlines()]
+        labels = [int(line[0]) for line in lines]
+        texts = [line[2] for line in lines]
+
+        data = pd.DataFrame(data = {'label' : labels, 'text' : texts})
+
+    print('------------', '\n', 'Tagging...')
+    data['POS'] = tag(data['text'])
+
+    print('------------', '\n', 'Counting and aggregating texts...')
+    number_texts = [0 for idx in range(args.authors_total)]
+
+    texts = ['' for idx in range(args.authors_total)]
+    pos_texts = ['' for idx in range(args.authors_total)]
+
+    total = ' '.join(texts)
+    pos_total = ''.join(pos_texts)
+
+    for index, row in data.iterrows():
+        author = int(row[0])
+        number_texts[author] += 1
+        filtered_sentence = row['text'].replace('\n', '').strip()
+
+        texts[author] = ' '.join([texts[author], filtered_sentence])
+        pos_texts[author] = ''.join([pos_texts[author], row[2]])
+
+    print('------------', '\n', 'Preprocessing complete!')
+    print('------------', '\n', 'Generating Char n-grams...')
+
+    n_grams = [return_best_n_grams(n, args.top_ngrams, total) for n in [1, 2, 3, 4]]
+
+    print('------------', '\n', 'Generating POS n-grams...')
+
+    pos_n_grams = [return_best_n_grams(n, args.top_ngrams, pos_total) for n in [1, 2, 3, 4]]
+
+    print('------------', '\n', 'Generating Word n-grams...')
+
+    word_n_grams = [return_best_word_n_grams(n, args.top_ngrams, tokenize(total)) for n in [1, 2, 3, 4]]
+
+    print('------------', '\n', 'Generating data...')
+    X = []
+    y = []
+    processed = 0
+    for index, row in data.iterrows():
+        if(processed % 1000 == 0):
+            print(f'{processed} texts processed')
+
+        y.append(int(row['label']))
+        X.append(ngram_rep(row['text'], row['POS_text'], args.V, n_grams, args.V, pos_n_grams, args.V, word_n_grams))
+
+        processed += 1
+
+    X = np.array(X)
+    y = np.array(y)
+
+    X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(X, y, test_size=args.test_size, random_state=1, shuffle=False, stratify=y)
+
+    print('------------', '\n', 'Scaling, Loading, and Shuffling Data')
+    Scaler = sklearn.preprocessing.StandardScaler().fit(X_train)
+    X_train = Scaler.transform(X_train)
+    X_test = Scaler.transform(X_test)
+
+    training_Loader = Loader(X_train, y_train)
+    validation_Loader = Loader(X_test, y_test)
+
+    training_set = torch.utils.data.DataLoader(training_Loader, batch_size = BATCH_SIZE, shuffle = True)
+    validation_set = torch.utils.data.DataLoader(validation_Loader, batch_size = BATCH_SIZE, shuffle = False)
+
+    pickle.dump(X_train, open(os.path.join(save_path, 'X_train.pkl'), 'wb'))
+    pickle.dump(y_train, open(os.path.join(save_path, 'y_train.pkl'), 'wb'))
+    pickle.dump(X_test, open(os.path.join(save_path, 'X_test.pkl'), 'wb'))
+    pickle.dump(y_test, open(os.path.join(save_path, 'y_test.pkl'), 'wb'))
+
+    features = [n_grams, pos_n_grams, word_n_grams]
+    pickle.dump(features, open((os.path.join(save_path, features.pkl', 'wb'))
+
+    model = Model(len(X_train[0]), num_authors)
+    #model.load_state_dict(torch.load('/content/gdrive/MyDrive/PSU_REU/Models/TuringBench/POS_NN/Blind_Black/model.pt'))
+
+    loss_function = nn.CrossEntropyLoss(weight = torch.Tensor(number_texts).to(device))
+    optimizer = optim.Adam(model.parameters(), lr = args.learning_rate, weight_decay = args.weight_decay)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size = args.step, gamma = args.gamma)
+
+    model = train_and_eval(model, args.epochs, training_set, validation_set, loss_function, optimizer, scheduler, head, 50)
+
+    #os.makedirs('/content/gdrive/MyDrive/PSU_REU/Models/BLOG/POS_NN/BLIND/Skip')
+    torch.save(model.state_dict(), os.path.join(save_path, 'model.pt'))
+
+    print('------------', '\n', 'Training Done!')
+
+if __name__ == "__main__":
+    main()
