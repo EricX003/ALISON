@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import datetime
 
 import copy
 import csv
@@ -129,7 +130,7 @@ def ngram_rep(text, pos_text, features):
             to_ret.append(text.count(''.join(n_gram)) / num_ngrams if num_ngrams != 0 else 0)
 
     for idx in range(len(features[1])):
-        num_pos_ngrams = len(Counter(get_ngrams(pos_text, len(features[1][idx][0]))))
+        num_pos_ngrams = len(Counter(ngrams(pos_text, len(features[1][idx][0]))))
 
         for pos_n_gram in features[1][idx]:
             to_ret.append(pos_text.count(''.join(pos_n_gram)) / num_pos_ngrams if num_pos_ngrams != 0 else 0)
@@ -150,22 +151,3 @@ def tokenize(text):
     for sent in sent_tokenize(text):
         ret.extend(word_tokenize(sent))
     return ret
-
-def genPreds(data, tokenizer, classifier):
-
-    preds = []
-
-    for idx, row in data.iterrows():
-        elem = row['Text']
-        elem = tokenizer(elem, return_tensors="pt", padding="max_length", truncation=True, max_length=512).to(device)
-        with torch.no_grad():
-            logits = classifier(**elem).logits
-        preds.append(logits.argmax().item())
-
-        del elem
-        del logits
-
-        torch.cuda.empty_cache()
-
-    torch.cuda.empty_cache()
-    return preds

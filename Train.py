@@ -1,17 +1,14 @@
-import Utils
-import NN
+from Utils import *
 from NN import *
-from datetime import datetime
 
 def main():
     now = datetime.now()
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     gc.collect()
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--train', '-T', help = 'Path to Training Data', '../Data/train.csv')
+    parser.add_argument('--train', '-T', help = 'Path to Training Data', default='../Data/train.txt')
     parser.add_argument('--authors_total', '-at', help='Number of Total Authors in Corpus', default = 10)
 
     parser.add_argument('--trial_name', 'tm', help='The Current Trial\'s Name (e.g. Dataset Name)')
@@ -31,7 +28,8 @@ def main():
     args = parser.parse_args()
 
     dir = os.getcwd()
-    save_path = os.path.join(dir, 'Trained_Models', f'{args.trial_name}_{now.strftime('%m.%d.%H.%M.%S')}')
+    trial_name = f'{args.trial_name}_{now.strftime("%m.%d.%H.%M.%S")}'
+    save_path = os.path.join(dir, 'Trained_Models', trial_name)
 
     os.makedirs(save_path)
 
@@ -101,8 +99,8 @@ def main():
     training_Loader = Loader(X_train, y_train)
     validation_Loader = Loader(X_test, y_test)
 
-    training_set = torch.utils.data.DataLoader(training_Loader, batch_size = BATCH_SIZE, shuffle = True)
-    validation_set = torch.utils.data.DataLoader(validation_Loader, batch_size = BATCH_SIZE, shuffle = False)
+    training_set = torch.utils.data.DataLoader(training_Loader, batch_size = args.batch_size, shuffle = True)
+    validation_set = torch.utils.data.DataLoader(validation_Loader, batch_size = args.batch_size, shuffle = False)
 
     pickle.dump(X_train, open(os.path.join(save_path, 'X_train.pkl'), 'wb'))
     pickle.dump(y_train, open(os.path.join(save_path, 'y_train.pkl'), 'wb'))
@@ -110,16 +108,16 @@ def main():
     pickle.dump(y_test, open(os.path.join(save_path, 'y_test.pkl'), 'wb'))
 
     features = [n_grams, pos_n_grams, word_n_grams]
-    pickle.dump(features, open((os.path.join(save_path, features.pkl', 'wb'))
+    pickle.dump(features, open(os.path.join(save_path, 'features.pkl'), 'wb'))
 
-    model = Model(len(X_train[0]), num_authors)
+    model = Model(len(X_train[0]), args.num_authors)
     #model.load_state_dict(torch.load('/content/gdrive/MyDrive/PSU_REU/Models/TuringBench/POS_NN/Blind_Black/model.pt'))
 
     loss_function = nn.CrossEntropyLoss(weight = torch.Tensor(number_texts).to(device))
     optimizer = optim.Adam(model.parameters(), lr = args.learning_rate, weight_decay = args.weight_decay)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size = args.step, gamma = args.gamma)
 
-    model = train_and_eval(model, args.epochs, training_set, validation_set, loss_function, optimizer, scheduler, head, 50)
+    model = train_and_eval(model, training_set, validation_set, loss_function, optimizer, scheduler, save_path=save_path, EPOCHS = args.epochs, save_epoch=10)
 
     #os.makedirs('/content/gdrive/MyDrive/PSU_REU/Models/BLOG/POS_NN/BLIND/Skip')
     torch.save(model.state_dict(), os.path.join(save_path, 'model.pt'))

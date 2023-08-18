@@ -4,8 +4,15 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import Dataset
+import time 
 
-import captum
+
+from captum.attr import IntegratedGradients
+import tqdm
+import os
+import gc
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class Model(nn.Module):
 
@@ -61,11 +68,11 @@ class Loader(Dataset):
     def __getitem__(self, idx):
         return self.x[idx], self.y[idx]
 
-def train_and_eval(model, EPOCHS, training_set, validation_set, loss_function, optimizer, scheduler, save_path, save_epoch):
+def train_and_eval(model, training_set, validation_set, loss_function, optimizer, scheduler, epochs=30, save_path='./', save_epoch=10):
 
     model.to(device)
 
-    for epoch in range(1, EPOCHS + 1):
+    for epoch in range(1, epochs + 1):
         print('------------', '\n', 'Epoch #:', epoch, '\n', 'Training:')
 
         with torch.set_grad_enabled(True):
@@ -151,3 +158,22 @@ def train_and_eval(model, EPOCHS, training_set, validation_set, loss_function, o
             torch.save(model.state_dict(), os.path.join(save_path, f'model_{epoch}.pt'))
 
     return model
+
+def genPreds(data, tokenizer, classifier):
+
+    preds = []
+
+    for idx, row in data.iterrows():
+        elem = row['Text']
+        elem = tokenizer(elem, return_tensors="pt", padding="max_length", truncation=True, max_length=512).to(device)
+        with torch.no_grad():
+            logits = classifier(**elem).logits
+        preds.append(logits.argmax().item())
+
+        del elem
+        del logits
+
+        torch.cuda.empty_cache()
+
+    torch.cuda.empty_cache()
+    return preds
