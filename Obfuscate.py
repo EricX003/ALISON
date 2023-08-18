@@ -1,5 +1,5 @@
-import Utils
-import NN
+from Utils import *
+from Replacer import *
 from NN import *
 
 def clean(texts):
@@ -8,7 +8,7 @@ def clean(texts):
     for elem in texts:
 
         #elem = elem.upper()
-        elem = elem..strip().strip('"').strip("'").replace("  ", "")
+        elem = elem.strip().strip('"').strip("'").replace("  ", "")
 
         for punct in ["!", ".", "?", ':', ";", ","]:
             elem = elem.replace(f" {punct}", punct)
@@ -59,6 +59,7 @@ def replace_interval(words, interval):
 
 
 def main():
+    now = datetime.now()
 
     parser = argparse.ArgumentParser()
 
@@ -77,29 +78,28 @@ def main():
     args = parser.parse_args()
 
     dir = os.getcwd()
-    save_path = os.path.join(dir, 'Trained_Models', f'{args.trial_name}_{now.strftime('%m.%d.%H.%M.%S')}')
+    timestamp = now.strftime("%m.%d.%H.%M.%S")
+    save_path = os.path.join(dir, 'Trained_Models', f'{args.trial_name}_{timestamp}')
 
     os.makedirs(save_path)
 
     print('------------', '\n', 'Loading Data...')
     with open(args.dir, 'r') as reader:
-        lines = [partition(line, ' ') for line in reader.readlines()]
+        lines = [line.partition(' ') for line in reader.readlines()]
         data = pd.DataFrame(data = {
                                     'text' : [line[2] for line in lines],
-                                    'label' : [int(line[0]) for line in lines)]
+                                    'label' : [int(line[0]) for line in lines]
                                     })
 
     features = np.array(pickle.load(open(os.path.join(args.dir, 'features.pkl'), "rb")))
+    Scaler= np.array(pickle.load(open(os.path.join(args.dir, 'Scaler.pkl'), "rb")))
     num_char = features[0].size
     num_pos = features[1].size
     features = features.flatten().tolist()
 
-    print('------------', '\n', 'Tagging...')
-    data['POS'] = tag(data['text'])
-
     ngram_reps = []
     for idx, row in data.iterrows():
-        ngram_reps.append(ngram_rep(row[0], row[1], features)
+        ngram_reps.append(ngram_rep(row[0], row[1], features))
     ngram_reps = Scaler.fit_transform(np.array(ngram_reps))
 
     ig_set = torch.utils.data.DataLoader(Loader(ngram_reps, data['label']), batch_size=1, shuffle=False)
@@ -139,7 +139,6 @@ def main():
         torch.cuda.empty_cache()
 
         text = row['text']
-        pos_text = row['POS']
         attribution = row['attribution']
 
         mult = [args.c ** len(feature) for feature in features]
@@ -150,10 +149,10 @@ def main():
         ranked_indexes.reverse()
         to_replace = [features[elem] for elem in ranked_indexes]
 
-        to_replace = [replace for replace in to_replace if len(replace) > MIN_LENGTH]
-        to_replace = to_replace[ : NUM_NGRAMS_TO_REPLACE]
+        to_replace = [replace for replace in to_replace if len(replace) > args.min_length]
+        to_replace = to_replace[ : args.L]
 
-        words = tokenize(sentence)
+        words = tokenize(text)
 
         retagged = pos_tag(words)
         retagged = [to_compressed(tup[1]) for tup in retagged]

@@ -28,7 +28,8 @@ def main():
     args = parser.parse_args()
 
     dir = os.getcwd()
-    trial_name = f'{args.trial_name}_{now.strftime("%m.%d.%H.%M.%S")}'
+    timestamp = now.strftime("%m.%d.%H.%M.%S")
+    trial_name = f'{args.trial_name}_{timestamp}'
     save_path = os.path.join(dir, 'Trained_Models', trial_name)
 
     os.makedirs(save_path)
