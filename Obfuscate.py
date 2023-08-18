@@ -31,7 +31,7 @@ def main():
     parser.add_argument('--texts', '-t', help = 'Path to texts for obfuscation')
     parser.add_argument('--authors_total', '-at', help='Number of Total Authors in Corpus', default = 10)
     parser.add_argument('--dir', '-f', help = 'Path to the directory containing the trained model')
-    parser.add_argument('--trial_name', 'tm', help='The Current Trial\'s Name (e.g. Dataset Name)')
+    parser.add_argument('--trial_name', 'tm', help='The Current Trial\'s Name (e.g. Dataset Name)', default='')
 
     parser.add_argument('--L', '-L', help='L, the number of top POS n-grams to mask', default = 15)
     parser.add_argument('--c', '-c', help='c, the length scaling constant', default = 1.35)
