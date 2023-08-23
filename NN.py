@@ -21,26 +21,17 @@ class Model(nn.Module):
 
         self.act = nn.ReLU()
         self.dp = 0.40
-        self.width = 512
+        self.width = 256
         self.num_classes = num_classes
-        self.linear_relu_stack = nn.Sequential(
+        self.stack = nn.Sequential(
             nn.Dropout(p = self.dp),
             nn.Linear(in_size, self.width),
             self.act,
             nn.Dropout(p = self.dp),
-            nn.Linear(self.width, self.width),
+            nn.Linear(in_size, self.width),
             self.act,
             nn.Dropout(p = self.dp),
-            nn.Linear(self.width, self.width),
-            self.act,
-            nn.Dropout(p = self.dp),
-            nn.Linear(self.width, self.width),
-            self.act,
-            nn.Dropout(p = self.dp),
-            nn.Linear(self.width, self.width),
-            self.act,
-            nn.Dropout(p = self.dp),
-            nn.Linear(self.width, self.width),
+            nn.Linear(in_size, self.width),
             self.act,
             nn.Dropout(p = self.dp),
             nn.Linear(self.width, self.width),
@@ -55,7 +46,7 @@ class Model(nn.Module):
         )
 
     def forward(self, x):
-        return self.linear_relu_stack(x)
+        return self.stack(x)
 
 class Loader(Dataset):
     def __init__(self, x, y):
@@ -93,9 +84,7 @@ def train_and_eval(model, training_set, validation_set, loss_function, optimizer
 
                     training_data = training_data.to(device)
                     labels = torch.tensor(labels, dtype = torch.long)
-                    #print(labels)
                     labels = labels.to(device)
-                    #print(correct_prediction)
 
                     optimizer.zero_grad()
 
@@ -118,7 +107,6 @@ def train_and_eval(model, training_set, validation_set, loss_function, optimizer
             print('Training Accuracy: ', training_accuracy)
 
             scheduler.step()
-
 
         print('------------', '\n', 'Validation:')
         model.eval()
