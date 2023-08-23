@@ -120,7 +120,6 @@ def main():
 
     model = train_and_eval(model, training_set, validation_set, loss_function, optimizer, scheduler, save_path=save_path, EPOCHS = args.epochs, save_epoch=10)
 
-    #os.makedirs('/content/gdrive/MyDrive/PSU_REU/Models/BLOG/POS_NN/BLIND/Skip')
     torch.save(model.state_dict(), os.path.join(save_path, 'model.pt'))
 
     print('------------', '\n', 'Training Done!')
