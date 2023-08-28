@@ -8,7 +8,8 @@ def clean(texts):
     for elem in texts:
 
         #elem = elem.upper()
-        elem = elem.strip().strip('"').strip("'").replace("  ", "")
+        elem = elem.strip().strip('"').strip("'")
+        elem = re.sub(r'\s+', ' ', elem)
 
         for punct in ["!", ".", "?", ':', ";", ","]:
             elem = elem.replace(f" {punct}", punct)
