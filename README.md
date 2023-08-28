@@ -49,7 +49,3 @@ Here we explain each argument in detail:
   * --c: c, the length scaling constant (default 1.35)
   * --min_length: The minimum length of POS n-gram to consider for obfuscation (default 1)
   * --ig_steps: Number of steps associated with discrete integral calculation for Integrated Gradients attribution (default 1024)
-
-  
-## To Do
-Update with automatic evaluation scripts
