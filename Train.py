@@ -112,8 +112,7 @@ def main():
     pickle.dump(features, open(os.path.join(save_path, 'features.pkl'), 'wb'))
 
     model = Model(len(X_train[0]), args.num_authors)
-    #model.load_state_dict(torch.load('/content/gdrive/MyDrive/PSU_REU/Models/TuringBench/POS_NN/Blind_Black/model.pt'))
-
+    
     loss_function = nn.CrossEntropyLoss(weight = torch.Tensor(number_texts).to(device))
     optimizer = optim.Adam(model.parameters(), lr = args.learning_rate, weight_decay = args.weight_decay)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size = args.step, gamma = args.gamma)
