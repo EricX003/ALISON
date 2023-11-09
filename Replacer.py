@@ -32,7 +32,6 @@ def replace_interval(words, interval):
     predicted_tokens = [predicted_token[pos] for pos in masked_positions]
 
     del inputs, token_ids, outputs, predictions, sorted_idx, sorted_preds
-    torch.cuda.empty_cache()
 
     rep_idx = 0
     for word_idx in range(len(words)):
