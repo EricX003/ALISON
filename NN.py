@@ -160,8 +160,5 @@ def genPreds(data, tokenizer, classifier):
 
         del elem
         del logits
-
-        torch.cuda.empty_cache()
-
-    torch.cuda.empty_cache()
+        
     return preds
