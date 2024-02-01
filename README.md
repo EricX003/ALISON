@@ -1,6 +1,8 @@
 # ALISON
 Fast and Effective Stylometric Authorship Obfuscation
 
+[pipeline.pdf](https://github.com/EricX003/ALISON/files/14129376/pipeline.pdf)
+
 ## Data
 The three datasets used can be found in the Data folder. Due to TuringBench's large size, it has been partitioned into three files.
 
@@ -8,7 +10,8 @@ The three datasets used can be found in the Data folder. Due to TuringBench's la
 Required packages are listed in the requirements.txt file:
 ```
 pip install -r requirements.txt
-```
+``'
+
 
 ## How to Use
 
