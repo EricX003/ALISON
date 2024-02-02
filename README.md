@@ -1,11 +1,13 @@
 # ALISON: Fast and Effective Stylometric Authorship Obfuscation
 
-![teaser](Data/imgs/teaser.png)
+<p align="center">
+<img src="Data/imgs/teaser.png" width="60%" height="60%">
+</p>
 
 ## Data
 The three datasets used can be found in the Data folder. Due to TuringBench's large size, it has been partitioned into three files.
 
-## How to Use
+## Usage
 First, clone this repo:
 ```
 git clone https://github.com/EricX003/ALISON
@@ -15,12 +17,12 @@ And resolve dependencies:
 pip install -r requirements.txt
 ```
 
-* Train the n-gram based neural network classifier
+### Train the Attributor:
 
 ```
 python Train.py
 ```
-Here we explain each argument in detail:
+Arguments:
 
   * --train: The path to the training data.
   * --authors_total: Total number of authors in the dataset (default 10)
@@ -35,15 +37,13 @@ Additional arguments for fine-tuning the hyperparms of the training of the n-gra
 python Train.py -h
 ```
 
-![pipeline](Data/imgs/ALISON_Pipeline.drawio.png)
-
-For Obfuscation:
+### For Obfuscation:
 
 ```
 python Obfuscate.py
 ```
 
-Here we explain each argument in detail:
+Arguments:
 
   * --texts: The path to the texts for obfuscation.
   * --authors_total: Total number of authors in the dataset (default 10)
@@ -55,7 +55,6 @@ Here we explain each argument in detail:
   * --ig_steps: Number of steps associated with discrete integral calculation for Integrated Gradients attribution (default 1024)
 
 ## Citation
-
 ```bibtex
 @inproceedings{xing2024alison,
       title={ALISON: Fast and Effective Stylometric Authorship Obfuscation}, 
