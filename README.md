@@ -1,6 +1,6 @@
 # ALISON: Fast and Effective Stylometric Authorship Obfuscation
 
-![teaser](Data/imgs/teaser.pdf)
+![teaser](Data/imgs/teaser.png)
 
 ## Data
 The three datasets used can be found in the Data folder. Due to TuringBench's large size, it has been partitioned into three files.
@@ -35,7 +35,7 @@ Additional arguments for fine-tuning the hyperparms of the training of the n-gra
 python Train.py -h
 ```
 
-![pipeline](Data/imgs/ALISON_Pipeline.drawio.pdf)
+![pipeline](Data/imgs/ALISON_Pipeline.drawio.png)
 
 For Obfuscation:
 
