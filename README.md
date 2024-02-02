@@ -1,7 +1,6 @@
-# ALISON
-Fast and Effective Stylometric Authorship Obfuscation
+# ALISON: Fast and Effective Stylometric Authorship Obfuscation
 
-![pipeline.pdf](https://github.com/EricX003/ALISON/files/14129376/pipeline.pdf)
+![teaser](Data/imgs/teaser.pdf)
 
 ## Data
 The three datasets used can be found in the Data folder. Due to TuringBench's large size, it has been partitioned into three files.
@@ -35,6 +34,7 @@ Additional arguments to fine-tune the training of the n-gram based neural networ
 python Train.py -h
 ```
 
+![pipeline](Data/imgs/ALISON_Pipeline.drawio.pdf)
 
 For Obfuscation:
 
@@ -52,3 +52,14 @@ Here we explain each argument in detail:
   * --c: c, the length scaling constant (default 1.35)
   * --min_length: The minimum length of POS n-gram to consider for obfuscation (default 1)
   * --ig_steps: Number of steps associated with discrete integral calculation for Integrated Gradients attribution (default 1024)
+
+## Citation
+
+```bibtex
+@inproceedings{xing2024alison,
+      title={ALISON: Fast and Effective Stylometric Authorship Obfuscation}, 
+      author={Eric Xing and Saranya Venkatraman and Thai Le and Dongwon Lee},
+      booktitle={AAAI},
+      year={2024},
+}
+```
