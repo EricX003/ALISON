@@ -5,14 +5,15 @@
 ## Data
 The three datasets used can be found in the Data folder. Due to TuringBench's large size, it has been partitioned into three files.
 
-## Prerequisites
-Required packages are listed in the requirements.txt file:
+## How to Use
+First, clone this repo:
+```
+git clone https://github.com/EricX003/ALISON
+```
+And resolve dependencies:
 ```
 pip install -r requirements.txt
 ```
-
-
-## How to Use
 
 * Train the n-gram based neural network classifier
 
@@ -24,12 +25,12 @@ Here we explain each argument in detail:
   * --train: The path to the training data.
   * --authors_total: Total number of authors in the dataset (default 10)
   * --dir: Path to the directory containing the trained model (Contains feature set, model, etc.)
-  * --trial_name: Name of the trial (human-readable) to generate the save directory (default is empty string)
+  * --trial_name: Name of the trial (human-readable) to generate the save directory (default is an empty string)
   * --test_size: Proportion of Data to use for network testing (default 0.15)
-  * --top_ngrams: t, The Number of top character and POS-ngrams to retain
+  * --top_ngrams: t, The Number of top character and POS-n-grams to retain
   * --V: V, the set of n-gram lengths to use (default '[1, 2, 3, 4]')
 
-Additional arguments to fine-tune the training of the n-gram based neural network model are provided, and can be accessed via:
+Additional arguments for fine-tuning the hyperparms of the training of the n-gram-based neural network model are provided and can be accessed via:
  ```
 python Train.py -h
 ```
